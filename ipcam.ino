@@ -30,18 +30,32 @@
 
 #include "esp_camera.h"
 #include <WiFi.h>
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h" //disable brownour problems
+#include "soc/rtc_cntl_reg.h"  //disable brownour problems
 
 #include "FS.h" // used by SDcard
 #include "SD.h" // used by SDcard
 #include "SPI.h" // used by SDcard
-
+#include <WiFi.h> //used for internet time
  
 #define CAMERA_MODEL_AI_THINKER
 
-const char* ssid = "WiFissid";
-const char* password = "password";
+const char* ssid = "WiFi ";
+const char* password = "pass";
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
+
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
 
 
 #if defined(CAMERA_MODEL_AI_THINKER) //zie esp32-cam schema v1.6.pdf
@@ -275,7 +289,9 @@ void setup() {
   }
 
   // camera init
-  esp_err_t err = esp_camera_init(&config);
+ 
+  
+   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("bad contact in connector or Camera init failed with error 0x%x", err);
     return;
@@ -283,7 +299,7 @@ void setup() {
 
   //drop down frame size for higher initial frame rate
   sensor_t * s = esp_camera_sensor_get();
-  //s->set_framesize(s, FRAMESIZE_QVGA);
+  
   s->set_framesize(s, FRAMESIZE_UXGA);// 
 
  
@@ -297,6 +313,12 @@ void setup() {
   }
   Serial.println("");
   Serial.println("WiFi connected");
+
+
+
+   //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  printLocalTime();
 
   startCameraServer();
 
@@ -368,5 +390,6 @@ if (false ){
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(10000);
+  delay(1000);
+  printLocalTime();
 }
