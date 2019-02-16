@@ -1,5 +1,5 @@
 // Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD//// Licensed under the Apache License, Version 2.0 (the "License");// you may not use this file except in compliance with the License.// You may obtain a copy of the License at////     http://www.apache.org/licenses/LICENSE-2.0//// Unless required by applicable law or agreed to in writing, software// distributed under the License is distributed on an "AS IS" BASIS,// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.// See the License for the specific language governing permissions and// limitations under the License.
-
+//https://github.com/v12345vtm/ESP32-CAM-IPCAM
 #include "esp_http_server.h"
 #include "esp_timer.h"
 #include "esp_camera.h"
@@ -13,7 +13,7 @@ static const char PROGMEM INDEX2_HTML[] = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title> v12345vtm ESP32-CAM-IPCAM</title>
+<title>v5 almost SD-card  v12345vtm ESP32-CAM-IPCAM</title>
 <style>
 body{font-family:Arial,Helvetica,sans-serif;background:#f2ff3f;color:#000000;font-size:16px}h2{font-size:18px}section.main{display:flex}#menu,section.main{flex-direction:column}#menu{display:none;flex-wrap:nowrap;min-width:340px;background:#666666;padding:8px;border-radius:4px;margin-top:-10px;margin-right:10px}#content{display:flex;flex-wrap:wrap;align-items:stretch}figure{padding:0;margin:0;-webkit-margin-before:0;margin-block-start:0;-webkit-margin-after:0;margin-block-end:0;-webkit-margin-start:0;margin-inline-start:0;-webkit-margin-end:0;margin-inline-end:0}figure img{display:block;width:100%;height:auto;border-radius:4px;margin-top:8px}@media (min-width: 800px) and (orientation:landscape){#content{display:flex;flex-wrap:nowrap;align-items:stretch}figure img{display:block;max-width:100%;max-height:calc(100vh - 40px);width:auto;height:auto}figure{padding:0;margin:0;-webkit-margin-before:0;margin-block-start:0;-webkit-margin-after:0;margin-block-end:0;-webkit-margin-start:0;margin-inline-start:0;-webkit-margin-end:0;margin-inline-end:0}}section#buttons{display:flex;flex-wrap:nowrap;justify-content:space-between}#nav-toggle{cursor:pointer;display:block}#nav-toggle-cb{outline:0;opacity:0;width:0;height:0}#nav-toggle-cb:checked+#menu{display:flex}.input-group{display:flex;flex-wrap:nowrap;line-height:22px;margin:5px 0}.input-group>label{display:inline-block;padding-right:10px;min-width:47%}.input-group input,.input-group select{flex-grow:1}.range-max,.range-min{display:inline-block;padding:0 5px}button{display:block;margin:5px;padding:0 12px;border:0;line-height:28px;cursor:pointer;color:#fff;background:#ff3034;border-radius:5px;font-size:16px;outline:0}button:hover{background:#ff494d}button:active{background:#f21c21}button.disabled{cursor:default;background:#a0a0a0}input[type=range]{-webkit-appearance:none;width:100%;height:22px;background:#363636;cursor:pointer;margin:0}input[type=range]:focus{outline:0}input[type=range]::-webkit-slider-runnable-track{width:100%;height:2px;cursor:pointer;background:#EFEFEF;border-radius:0;border:0 solid #EFEFEF}input[type=range]::-webkit-slider-thumb{border:1px solid rgba(0,0,30,0);height:22px;width:22px;border-radius:50px;background:#ff3034;cursor:pointer;-webkit-appearance:none;margin-top:-11.5px}input[type=range]:focus::-webkit-slider-runnable-track{background:#EFEFEF}input[type=range]::-moz-range-track{width:100%;height:2px;cursor:pointer;background:#EFEFEF;border-radius:0;border:0 solid #EFEFEF}input[type=range]::-moz-range-thumb{border:1px solid rgba(0,0,30,0);height:22px;width:22px;border-radius:50px;background:#ff3034;cursor:pointer}input[type=range]::-ms-track{width:100%;height:2px;cursor:pointer;background:0 0;border-color:transparent;color:transparent}input[type=range]::-ms-fill-lower{background:#EFEFEF;border:0 solid #EFEFEF;border-radius:0}input[type=range]::-ms-fill-upper{background:#EFEFEF;border:0 solid #EFEFEF;border-radius:0}input[type=range]::-ms-thumb{border:1px solid rgba(0,0,30,0);height:22px;width:22px;border-radius:50px;background:#ff3034;cursor:pointer;height:2px}input[type=range]:focus::-ms-fill-lower{background:#EFEFEF}input[type=range]:focus::-ms-fill-upper{background:#363636}.switch{display:block;position:relative;line-height:22px;font-size:16px;height:22px}.switch input{outline:0;opacity:0;width:0;height:0}.slider{width:50px;height:22px;border-radius:22px;cursor:pointer;background-color:grey}.slider,.slider:before{display:inline-block;transition:.4s}.slider:before{position:relative;content:"";border-radius:50%;height:16px;width:16px;left:4px;top:3px;background-color:#fff}input:checked+.slider{background-color:#ff3034}input:checked+.slider:before{-webkit-transform:translateX(26px);transform:translateX(26px)}select{border:1px solid #363636;font-size:14px;height:22px;outline:0;border-radius:5px}.image-container{position:relative;min-width:160px}.close{position:absolute;right:5px;top:5px;background:#ff3034;width:16px;height:16px;border-radius:100px;color:#fff;text-align:center;line-height:18px;cursor:pointer}.hidden{display:none}
 </style>
@@ -76,24 +76,43 @@ httpd_handle_t stream_httpd = NULL;
 httpd_handle_t camera_httpd = NULL;
 
 
-static void rgb_print(dl_matrix3du_t *image_matrix, uint32_t color, const char * str) {
-  Serial.println("v12345vtm streaming");
-fb_data_t fb;
-fb.width = image_matrix->w;
-fb.height = image_matrix->h;
-fb.data = image_matrix->item;
-fb.bytes_per_pixel = 3;
-fb.format = FB_BGR888;
-fb_gfx_print(&fb, (fb.width - (strlen(str) * 14)) / 2, 10, color, str);
-}
+ 
+  // Function for stopping the webserver
+//void stop_webserver(httpd_handle_t  server)//stop de foto capture server
+void stop_fotowebserver() //stop de foto server vanuit de ino-file
+ {
+ httpd_handle_t server = camera_httpd; //overwriten parameter omdat we vanuit de ino-file geen parameter kunnen meegeven
+      // Ensure handle is non NULL
+      if (server != NULL) {
+          // Stop the httpd server
+          httpd_stop(server);
+           Serial.printf("fotoserver gestopt \n");  
+      }
+ }
+
+void stop_streamwebserver() //stop de foto server vanuit de ino-file
+ {
+ httpd_handle_t server = stream_httpd; //overwriten parameter omdat we vanuit de ino-file geen parameter kunnen meegeven
+      // Ensure handle is non NULL
+      if (server != NULL) {
+          // Stop the httpd server
+          httpd_stop(server);
+           Serial.printf("streamserver gestopt \n");  
+      }
+ }
+
 
  
 
 static esp_err_t capture_handler(httpd_req_t *req) {
-camera_fb_t * fb = NULL;
+  Serial.println("v12345vtm okcapture req=");
+  Serial.println((long) req); // voorbeeld = 1073560312 constante?
+camera_fb_t * fb = NULL;// make room for the image to recieve
 esp_err_t res = ESP_OK;
-int64_t fr_start = esp_timer_get_time();
-fb = esp_camera_fb_get();
+int64_t fr_start = esp_timer_get_time();//get millies timestamp
+  Serial.println("esp_timer_get_time()=");
+    Serial.println( (long) fr_start); //voorbeeld  = varieert vb: 13085182 of 21219612
+fb = esp_camera_fb_get(); //methode in esp_camera.h to get image from cam
 if (!fb) {
 Serial.println("Camera capture failed");
 httpd_resp_send_500(req);
@@ -101,13 +120,9 @@ return ESP_FAIL;
 }
 httpd_resp_set_type(req, "image/jpeg");
 httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg"); //antwoord header an capture pagina
-size_t out_len, out_width, out_height;
-uint8_t * out_buf; 
-size_t fb_len = 0;
-if (fb->format == PIXFORMAT_JPEG) {
-fb_len = fb->len;
+size_t fb_len = 0; //metadata
+fb_len = fb->len;//metadata used in serialprint only
 res = httpd_resp_send(req, (const char *)fb->buf, fb->len);
-}
 esp_camera_fb_return(fb);
 int64_t fr_end = esp_timer_get_time();
 Serial.printf("JPG: %uB %ums\n", (uint32_t)(fb_len), (uint32_t)((fr_end - fr_start) / 1000));
@@ -144,14 +159,11 @@ while (true) { //continue streaming until it breaks
     else
   {
   fr_start = esp_timer_get_time();
-  fr_ready = fr_start;
-
- 
+  fr_ready = fr_start; 
 //  Serial.println("fbwidth=");
  // Serial.print(fb->width );//1600 pixels
   _jpg_buf_len = fb->len;
-  _jpg_buf = fb->buf;  
-  
+  _jpg_buf = fb->buf;   
     }
   
   if (res == ESP_OK) {     
@@ -189,10 +201,10 @@ while (true) { //continue streaming until it breaks
   Serial.printf("webpage loading \n");
   return httpd_resp_send(req, (const char *)INDEX2_HTML, strlen(INDEX2_HTML));
   }
-  
+ 
   void startCameraServer() {
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  
+  httpd_config_t config = HTTPD_DEFAULT_CONFIG(); //see esp_http_server.h
+ 
   httpd_uri_t index_uri = {
   .uri       = "/",
   .method    = HTTP_GET,
@@ -214,22 +226,25 @@ while (true) { //continue streaming until it breaks
   .user_ctx  = NULL
   };
   
-  
-  
-  Serial.printf("Starting web server on port: '%d'\n", config.server_port);
+    Serial.printf("CPP Starting web server on port: '%d'\n", config.server_port);
   if (httpd_start(&camera_httpd, &config) == ESP_OK) {
   httpd_register_uri_handler(camera_httpd, &index_uri);
   httpd_register_uri_handler(camera_httpd, &capture_uri);
   }
   
-  config.server_port += 1;
-  config.ctrl_port += 1;
+  config.server_port += 1;//in esp_http_server.h 
+  config.ctrl_port += 1;//in esp_http_server.h 
   
-  config.server_port = 9601; //stream
+  config.server_port = 9601; //stream//in esp_http_server.h 
   
   
-  Serial.printf("Starting stream server on stream port: '%d'\n", config.server_port);
+  Serial.printf("CPP Starting stream server on stream port: '%d'\n", config.server_port);
   if (httpd_start(&stream_httpd, &config) == ESP_OK) {
   httpd_register_uri_handler(stream_httpd, &stream_uri);
-  }
+}
+
+//stop_webserver(camera_httpd); //stop de foto capture server
+
+  
+ 
   }
