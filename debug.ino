@@ -2,6 +2,7 @@
    ESP32-CAM board uses  the SD card to the following pins:
   https://i.imgur.com/Pxa26nc.png
   edit by v12345vtm : https://www.youtube.com/user/v12345vtm
+  https://www.youtube.com/watch?v=PhrSWB4qWXg
 
 
    SD Card | ESP32    |esp32-cam
