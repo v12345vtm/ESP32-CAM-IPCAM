@@ -2,9 +2,9 @@
    ESP32-CAM board uses  the SD card to the following pins:
   https://i.imgur.com/Pxa26nc.png
   edit by v12345vtm : https://www.youtube.com/user/v12345vtm
-https://www.youtube.com/watch?v=PhrSWB4qWXg
+  https://www.youtube.com/watch?v=PhrSWB4qWXg
 
-
+  https://github.com/v12345vtm/ESP32-CAM-IPCAM
    SD Card | ESP32    |esp32-cam
       D2       -          -
       D3       SS         gpio13
@@ -15,19 +15,8 @@ https://www.youtube.com/watch?v=PhrSWB4qWXg
       VSS      GND          gnd
       D0       MISO         gpio2
       D1       -        -
-
-
-
-
-  WARNING!!! Make sure that you have either selected ESP32 Wrover Module,
-             or another board which has PSRAM enabled
-
-
-
-  the html -code is open and is easy to update or modify  on the other tab page = app_httpd.cpp
-
+  WARNING!!! Make sure that you have either selected ESP32 Wrover Module,which has PSRAM (eg ESP32-CAM)
 */
-
 
 #include "esp_camera.h"
 #include <WiFi.h>
@@ -39,9 +28,9 @@ https://www.youtube.com/watch?v=PhrSWB4qWXg
 #include "SPI.h" // used by SDcard
 #include <WiFi.h> //used for internet time
 
-#define CAMERA_MODEL_AI_THINKER
+#define CAMERA_MODEL_AI_THINKER //ESP32-CAM
 
-const char* ssid = "WiFi ";
+const char* ssid = "WiFi";
 const char* password = "pass";
 
 const char* ntpServer = "pool.ntp.org"; //internet time server
@@ -55,7 +44,7 @@ void printLocalTime()
     Serial.println("Failed to obtain time");
     return;
   }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
 
@@ -82,12 +71,21 @@ void printLocalTime()
 #define init_frame_size          FRAMESIZE_UXGA
 #define init_jpeg_quality      20
 #define init_fb_count           2
+//When 1 frame buffer is used, the driver will wait for the current frame to finish (VSYNC) and start I2S DMA.
+//After the frame is acquired, I2S will be stopped and the frame buffer returned to the application.
+//This approach gives more control over the system, but results in longer time to get the frame.
+//When 2 or more frame bufers are used,
+//I2S is running in continuous mode and each frame is pushed to a queue
+//that the application can access. This approach puts more strain on the CPU/Memory,
+//but allows for double the frame rate. Please use only with JPEG.
+
+
 #else
 #error "Camera model not selected"
 #endif
 
 bool gelukt  = false; //for debug in mainloop 1image
-bool webserverenabled = false ; //debug webserver on or off
+bool webserverenabled = true ; //debug webserver on or off
 bool testSDkaart = true; //sd card tests
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
@@ -246,7 +244,27 @@ void testFileIO(fs::FS &fs, const char * path) {
   Serial.printf("%u bytes written for %u ms\n", 2048 * 512, end);
   file.close();
 }
-void startCameraServer();
+void startCameraServer(); //functies in CPP file
+void stop_fotowebserver();
+void stop_streamwebserver();
+
+
+void WebserversOpstarten()
+{
+  //eerst SD initialiseren , dan de servers
+  startCameraServer();
+  Serial.print("Camera Ready! Use 'http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("' to connect , de stream zit op een andere poortkanaal 9601 ");
+  Serial.print("stream Ready! Use 'http://");
+  Serial.print(WiFi.localIP());
+  Serial.println(":9601/stream ");
+  Serial.print("image Ready! Use 'http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/capture ");
+
+}
+
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -316,25 +334,8 @@ void setup() {
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   printLocalTime();
 
-  if (webserverenabled){
 
-  startCameraServer();
-  Serial.print("Camera Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("' to connect , de stream zit op een andere poortkanaal 9601 ");
-  Serial.print("stream Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println(":9601/stream ");
-  Serial.print("image Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/capture ");
 
-  }
-  else
-  {
-     Serial.println("webserverenabled : uitgezet via bool webserverenabled ");
-    }
-  
 
 
 
@@ -342,7 +343,11 @@ void setup() {
   //SD.begin(13);
 
   if (testSDkaart ) {
-     Serial.println("SD CARD enabled");
+
+    stop_fotowebserver();
+    stop_streamwebserver();
+
+    Serial.println("SD CARD enabled");
     if (!SD.begin(13)) {
       Serial.println("Card Mount Failed if no begin13");
       return;
@@ -368,24 +373,24 @@ void setup() {
     uint64_t cardSize = SD.cardSize() / (1024 * 1024);
     Serial.printf("SD Card Size: %lluMB\n", cardSize);
 
-    //    listDir(SD, "/", 0);
-    //    createDir(SD, "/mydir");
-    //    listDir(SD, "/", 0);
-    //    removeDir(SD, "/mydir");
-    //    listDir(SD, "/", 2);
-    //    writeFile(SD, "/hello.txt", "Hello ");
-    //    appendFile(SD, "/hello.txt", "ESP32-CAM-SD-v12345vtm!\n");
-    //    readFile(SD, "/hello.txt");
-    //    deleteFile(SD, "/foo.txt");
-    //    renameFile(SD, "/hello.txt", "/foo.txt");
-    //    readFile(SD, "/foo.txt");
-    //    testFileIO(SD, "/test.txt");
+    listDir(SD, "/", 0);
+    createDir(SD, "/mydir");
+    listDir(SD, "/", 0);
+    removeDir(SD, "/mydir");
+    listDir(SD, "/", 2);
+    writeFile(SD, "/hello.txt", "Hello ");
+    appendFile(SD, "/hello.txt", "ESP32-CAM-SD-v12345vtm!\n");
+    readFile(SD, "/hello.txt");
+    // readFile(SD, "/index.jpg");
+    deleteFile(SD, "/foo.txt");
+    renameFile(SD, "/hello.txt", "/foo.txt");
+    readFile(SD, "/foo.txt");
+    testFileIO(SD, "/test.txt");
     Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
     Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 
-    // SPI.end() ;
-
-
+    // startCameraServer();// na SD card uitlezen  , webserver aanzetten
+    WebserversOpstarten();
   }
 
 }
@@ -394,12 +399,12 @@ void loop() {
   // put your main code here, to run repeatedly:
   delay(1000);
   printLocalTime();
+  Serial.printf("\n SD cardUsed space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 
-
+ listDir(SD, "/", 0);
 
   //get  1 image without webserverpages
   if (!gelukt) {
-
     camera_fb_t * foto = NULL;
     foto = esp_camera_fb_get(); //methode in esp_camera.h to get image from am
     if (!foto  ) {
@@ -407,17 +412,14 @@ void loop() {
     }
     else
     {
-      Serial.println("mainloop :manual Camera gelukt");
+      Serial.println("mainloop :manual Camera gelukt  ");
+      if (testSDkaart ) {
+        Serial.printf(" voor Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
+        writeFile(SD, "/loopfotojpg.txt", (char *)foto->buf);
+        Serial.println("\n\n\n TRIED TO SEND IMAGZ TO SD!!! but the payload is not good yet :)");
+      }
       gelukt = true;
-
     }
-
-
   }
-
-
-
   /////////////////////////////////////////////
-
-
 }
